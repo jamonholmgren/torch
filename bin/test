@@ -3,43 +3,92 @@
 TEST_ROOT="$(pwd)/test"
 ASSETS_ROOT="$(pwd)/assets"
 
-MIX_ENV=test mix compile --warnings-as-errors --force || { echo 'Please fix all compiler warnings.'; exit 1; }
-MIX_ENV=test mix credo --strict --ignore design,consistency || { echo 'Elixir code failed Credo linting. See warnings above.'; exit 1; }
-MIX_ENV=test mix docs || { echo 'Elixir HTML docs were not generated!'; exit 1; }
-MIX_ENV=test mix test || { echo 'Elixir tests on Torch failed!'; exit 1; }
-
+MIX_ENV=test mix compile --warnings-as-errors --force || {
+    echo 'Please fix all compiler warnings.'
+    exit 1
+}
+MIX_ENV=test mix credo --strict --ignore design,consistency || {
+    echo 'Elixir code failed Credo linting. See warnings above.'
+    exit 1
+}
+MIX_ENV=test mix docs || {
+    echo 'Elixir HTML docs were not generated!'
+    exit 1
+}
+MIX_ENV=test mix test || {
+    echo 'Elixir tests on Torch failed!'
+    exit 1
+}
 
 if [ $CI ]; then
-  if [ $TRAVIS ]; then
-    echo "----------------------------------------------------------"
-    echo "Running coveralls.travis..."
-    echo "----------------------------------------------------------"
-    mix coveralls.travis || { echo 'Elixir coverage on Torch failed!'; exit 1; }
-  else
-    echo "----------------------------------------------------------"
-    echo "Running coveralls..."
-    echo "----------------------------------------------------------"
-    mix coveralls || { echo 'Elixir coverage on Torch failed!'; exit 1; }
-  fi
+    if [ $TRAVIS ]; then
+        echo "----------------------------------------------------------"
+        echo "Running coveralls.travis..."
+        echo "----------------------------------------------------------"
+        mix coveralls.travis || {
+            echo 'Elixir coverage on Torch failed!'
+            exit 1
+        }
+    else
+        echo "----------------------------------------------------------"
+        echo "Running coveralls..."
+        echo "----------------------------------------------------------"
+        mix coveralls || {
+            echo 'Elixir coverage on Torch failed!'
+            exit 1
+        }
+    fi
 fi
 
 # Run JS assets lint checks
 cd "$ASSETS_ROOT" && {
-  npm install || { echo 'NPM install failed!'; exit 1; }
+    npm install || {
+        echo 'NPM install failed!'
+        exit 1
+    }
 }
 cd "$ASSETS_ROOT" && {
-  npm run test || { echo 'NPM test failed!'; exit 1; }
+    npm run test || {
+        echo 'NPM test failed!'
+        exit 1
+    }
 }
 
 # Run integration tests
-cd "$TEST_ROOT/support/apps/phx1_3" && {
-  bin/test || { echo 'Integration tests on regular Phoenix 1.3 project failed!'; exit 1; }
-}
+iexCurrentVersion="$(iex -v | tail -n 1 | cut -d " " -f2)"
+otpCurrentVersion="$(erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().' -noshell)"
+requiredMaxVersion="1.12.0"
+if [ "$(printf '%s\n' "$requiredMaxVersion" "$iexCurrentVersion" | sort -V | head -n1)" = "$requiredMaxVersion" ]; then
+    echo '[Skipping] Phoenix 1.3 is not supported on Elixir version 1.12+'
+else
+    cd "$TEST_ROOT/support/apps/phx1_3" && {
+        bin/test || {
+            echo 'Integration tests on regular Phoenix 1.3 project failed!'
+            exit 1
+        }
+    }
+fi
 
-cd "$TEST_ROOT/support/apps/phx1_4" && {
-  bin/test || { echo 'Integration tests on regular Phoenix 1.4 project failed!'; exit 1; }
-}
+requiredMaxVersion="24"
+if [ "$(printf '%s\n' "$requiredMaxVersion" "$otpCurrentVersion" | sort -V | head -n1)" = "$requiredMaxVersion" ]; then
+    cd "$TEST_ROOT/support/apps/phx1_4" && {
+        bin/test || {
+            echo 'Integration tests on regular Phoenix 1.4 project failed!'
+            exit 1
+        }
+    }
+else
+    echo '[Skipping] Phoenix 1.4 is not supported well on OTP 24+'
+fi
 
-cd "$TEST_ROOT/support/apps/phx1_5" && {
-  bin/test || { echo 'Integration tests on regular Phoenix 1.5 project failed!'; exit 1; }
-}
+requiredMaxVersion="22"
+if [ "$(printf '%s\n' "$requiredMaxVersion" "$otpCurrentVersion" | sort -V | head -n1)" = "$requiredMaxVersion" ]; then
+    echo '[Skipping] OTP 22+ is required for Phoenix 1.5+'
+else
+    cd "$TEST_ROOT/support/apps/phx1_5" && {
+        bin/test || {
+            echo 'Integration tests on regular Phoenix 1.5 project failed!'
+            exit 1
+        }
+    }
+fi

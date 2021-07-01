@@ -39,6 +39,12 @@ jobs:
             otp: 23.2.7
             warnings_as_errors: true
             static_analysis: false
+          - elixir: 1.12.x
+            otp: 22.x
+          - elixir: 1.12.x
+            otp: 23.x
+          - elixir: 1.12.x
+            otp: 24.x
 
     services:
       db:
