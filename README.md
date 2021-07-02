@@ -127,7 +127,19 @@ However, that does not mean you can't roll your own.
 We have a `Accounts.User` model that `has_many :credentials, Accounts.Credential` and we want to support filtering users
 by `credentials.email`.
 
-1. Update the `Accounts` domain.
+1. Add Torch pagination to the `Accounts` domain:
+
+```elixir
+# accounts.ex
+
+  use Torch.Pagination,
+    repo: MyApp.Repo,
+    model: MyApp.Accounts.User,
+    name: :users
+
+```
+
+**NOTE** If you want to customize the pagination functions at all for your application, do not use the default `Torch.Pagination` as described above; instead you will need to define your own `paginate_*/2` method that will return a `Scrivener.Page` object.  You can also define your own pagination system and functions as well, but that will require further customization of the generated Torch controllers as well.
 
 ```elixir
 # accounts.ex
